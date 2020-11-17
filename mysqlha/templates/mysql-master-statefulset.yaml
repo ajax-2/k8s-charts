@@ -1,0 +1,96 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: mysql-master
+  labels:
+    app: mysql-master
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysql-master
+      annotations:
+        descript: "mysql ha, one master, one slave."
+    spec:
+      containers:
+      - name: mysql
+        image: {{ .Values.image }}
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: mysql-root-password
+              name: mysql
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: mysql-password
+              name: mysql
+              optional: true
+        - name: MYSQL_USER
+        - name: MYSQL_DATABASE
+        ports:
+        - name: mysql
+          containerPort: 3306
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - |
+                until mysql -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD -e "SELECT 1"; do sleep 5; done
+                if [ `mysql -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD -e "select host from mysql.user where user='{{ .Values.slave.user }}'" -B -N |wc -l` -lt 1 ];then
+                  mysql -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD -e "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO '{{ .Values.slave.user }}'@'%' IDENTIFIED BY '{{ .Values.slave.password }}';"
+                  mysql -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD -e "flush privileges;"
+                fi
+        volumeMounts:
+        - mountPath: /etc/mysql/mysql.conf.d/mysqld.cnf
+          name: config
+          subPath: mysqld.cnf
+        - mountPath: /var/lib/mysql
+          name: mysql-master
+          subPath: data
+        - mountPath: /var/log/mysql
+          name: mysql-master
+          subPath: log
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - "-c"
+            - mysqladmin ping -h 127.0.0.1 -u root -p${MYSQL_ROOT_PASSWORD}
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            # Check we can execute queries over TCP (skip-networking is off).
+            command:
+            - /bin/sh
+            - "-c"
+            - MYSQL_PWD="${MYSQL_ROOT_PASSWORD}"
+            - mysql -h 127.0.0.1 -u root -e "SELECT 1"
+          initialDelaySeconds: 10
+          timeoutSeconds: 1
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: mysqld-master-conf
+          optional: false
+        name: config
+{{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-master
+      annotations:
+        descript: "master data"
+    spec:
+      accessModes: 
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: {{ .Values.persistence.size | quote }}
+{{- end }}

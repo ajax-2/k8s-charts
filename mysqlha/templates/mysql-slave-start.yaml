@@ -1,0 +1,43 @@
+apiVersion: v1
+data:
+  slave-start.sh: "#!/bin/bash\n\n# 展示slave启动时候的程序\n# 先判断是否能正常启动slave,如果能,不做后续处理\n#
+    如果不能,先尝试上次执行的slave命令\n# 如果还不行, 先备份从库数据,然后删除从库,再从主库同步数据\n# 同步数据后,开启slave备份\n\n#
+    初始化配置\nstorage='/backup'\nmaster_info=\"${storage}/master.info\"\nnowTime=`date
+    +\"%Y-%m-%d_%H:%M:%S\"`\nstatus_file=\"${storage}/status.info\"\nlocal_status_file=\"${storage}/local_status.info\"\n\n#
+    初始化文件\nif [[ ! -d ${storage} ]]; then\n\tmkdir -p ${storage}\nfi\n\nif [[ ! -f
+    ${status_file} ]];then\n\t> ${status_file}\nfi\n\n# 判断slave正常启动\nuntil mysql -h
+    127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD -e \"SELECT 1\"; do echo \"测试mysql启动中...\";
+    sleep 5; done\n\n# 判断master正常连接\nuntil mysql -h $MASTER_HOST -u$MASTER_USER -p$MASTER_PASSWORD
+    -P$MASTER_PORT -e \"SELECT 1\"; do echo \"测试master主从用户中...\"; sleep 5; done\n\n#
+    判断slave状态\nsql_status=`mysql -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD -e \"show
+    slave status\\G;\" |grep Slave_SQL_Running:|awk -F': ' '{print $2}'`\nio_status=`mysql
+    -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD -e \"show slave status\\G;\"  |grep
+    Slave_IO_Running:|awk -F': ' '{print $2}'`\nif [[ \"x$sql_status\" == \"xYes\"
+    && \"x$io_status\" == \"xYes\" ]];then\n\t> ${status_file}\n\techo \"slave状态正确\"\nelse\n\t#
+    如果状态文件记录连续超过3次,则判定无法启动\n\tif [[ `cat ${status_file} |wc -l` -gt 3 ]]; then\n\t\texit
+    1\n\telse\n\t\techo $nowTime >> ${status_file}\n\tfi\n\techo \"slave状态错误, 启动恢复\"\n\t#
+    导出主库的数据到本地\n\tdatabases=$(mysql -h $MASTER_HOST -uroot -p$MASTER_ROOT_PASSWORD
+    -P$MASTER_PORT -e \"show databases;\" -B -N|grep -v performance_schema |grep -v
+    information_schema|grep -v sys|tr '\\n' ' ')\n\tmysqldump --force -h $MASTER_HOST
+    -uroot -p$MASTER_ROOT_PASSWORD -P$MASTER_PORT --databases $databases --lock-tables=false
+    --master-data=2 --single-transaction > ${storage}/master_${nowTime}.sql\n\n\t#
+    备份当前数据库出mysql本身信息外的数据\n\tmysql -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD -e \"stop
+    slave;\"\n\tlocal_databases=$(mysql -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD
+    -e \"show databases;\" -B -N|grep -v performance_schema |grep -v information_schema|grep
+    -v mysql|grep -v sys|tr '\\n' ' ')\n\tmysqldump --force -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD
+    --databases $local_databases |gzip > ${storage}/${nowTime}.gz\n\techo ${nowTime}.gz
+    >> ${local_status_file}\n\t# 保留三次本地备份\n\tif [[ `cat ${local_status_file}|wc -l`
+    -gt 3 ]]; then\n\t\tdelete_local_file=`head -n 1 ${local_status_file}`\n\t\trm
+    -f ${storage}/${delete_local_file}\n\t\tsed -i \"/${delete_local_file}/d\" ${local_status_file}\n\tfi\n\t\n\t#
+    删除从库的数据\n\tfor db in $local_databases\n\tdo\n\t\tmysql -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD
+    -e \"drop database $db;\"\n\tdone\n\n\t# 构造master.info\n\tchange_master_info=$(head
+    -n 100 ${storage}/master_${nowTime}.sql |grep -e \"-- CHANGE\"|tr ';' ' ')\n\tchange_master_info=${change_master_info/--
+    /}\n\techo \"$change_master_info,MASTER_HOST=\\\"$MASTER_HOST\\\",MASTER_USER=\\\"$MASTER_USER\\\",MASTER_PORT=$MASTER_PORT,MASTER_PASSWORD=\\\"$MASTER_PASSWORD\\\";\"
+    > $master_info\n\t\n\t# 导入主库数据到从库中\n\tmysql -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD
+    < ${storage}/master_${nowTime}.sql\n\trm -f ${storage}/master_${nowTime}.sql\n\t\n\t#
+    开启同步\n\tchange_master_info=`cat ${master_info}`\n\tmysql -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD
+    -e \"$change_master_info\"\n\tmysql -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD
+    -e \"start slave;\"\n\nfi\n\n\n"
+kind: ConfigMap
+metadata:
+  name: slave-start

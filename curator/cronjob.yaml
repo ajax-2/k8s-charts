@@ -1,0 +1,58 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: elastic-curator
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containers:
+          - args:
+            - --config
+            - /tmp/config.yml
+            - /tmp/action.yml
+            image: registry-vpc.cn-hangzhou.aliyuncs.com/thundersdata-public/elastic-curator
+            imagePullPolicy: IfNotPresent
+            name: curator
+            resources:
+              requests:
+                cpu: 100m
+                memory: 300Mi
+              limits:
+                cpu: 200m
+                memory: 500Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            volumeMounts:
+            - mountPath: /tmp/action.yml
+              name: config
+              subPath: action.yml
+            - name: config
+              mountPath: /tmp/config.yml
+              subPath: config.yml
+            - name: time
+              mountPath: /etc/localtime
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+          imagePullSecrets:
+          - name: regsecret
+          volumes:
+          - configMap:
+              defaultMode: 420
+              name: curator-config
+            name: config
+          - name: time
+            hostPath:
+              path: /etc/localtime
+  schedule: '0 22 * * *'
+  suspend: false

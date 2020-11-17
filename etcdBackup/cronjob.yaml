@@ -1,0 +1,65 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: etcdbackup
+  namespace: tools
+spec:
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containers:
+          - command:
+            - /bin/bash
+            - /root/backup.sh
+            env:
+            - name: endpoints
+              value: "ENDPOINT"
+            - name: storagepath
+              value: /storagepath
+            - name: capath
+              value: /etc/kubernetes/pki/etcd
+            image: bubaoxiaoyu/backup_etcd-mysql:v1
+            imagePullPolicy: IfNotPresent
+            name: backup
+            resources: {}
+            volumeMounts:
+            - mountPath: /storagepath
+              name: storage
+            - mountPath: /etc/kubernetes/pki/etcd
+              name: cert
+              readOnly: true
+            - mountPath: /root/backup.sh
+              name: run
+              subPath: backup.sh
+            - mountPath: /etc/localtime
+              name: localtime
+          dnsPolicy: ClusterFirst
+          nodeName: MASTER
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+          tolerations:
+          - effect: NoSchedule
+            key: node-role.kubernetes.io/master
+            operator: Equal
+          volumes:
+          - name: storage
+            hostPath:
+              path: /mnt/etcd_backup/
+          - hostPath:
+              path: /etc/kubernetes/pki/etcd
+              type: ""
+            name: cert
+          - configMap:
+              defaultMode: 420
+              name: etcdbackup
+            name: run
+          - name: localtime
+            hostPath:
+              path: /etc/localtime
+  schedule: 0 22 * * *

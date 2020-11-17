@@ -1,0 +1,13 @@
+client:
+  hosts:
+    - 10.1.9.171
+  port: 9200
+  use_ssl: False
+  ssl_no_validate: True
+  timeout: 30
+
+logging:
+  loglevel: INFO
+  logfile:
+  logformat: default
+  blacklist: ['elasticsearch', 'urllib3']

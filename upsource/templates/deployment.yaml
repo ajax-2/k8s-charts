@@ -1,0 +1,59 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ template "upsource.fullname" . }}
+  labels:
+    app: upsource
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: upsource
+  template:
+    metadata:
+      labels:
+        app: upsource
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+          {{- if .Values.persistent.enable }}
+          volumeMounts:
+          - name: data
+            mountPath: /opt/upsource/data
+            subpath: data
+          - name: data
+            mountPath: /opt/upsource/conf
+            subpath: conf
+          - name: data
+            mountPath: /opt/upsource/logs
+            subpath: logs
+          - name: data
+            mountPath: /opt/upsource/backups
+            subpath: backups
+          {{- end }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- if .Values.persistent.enable }}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.persistent.name }}
+    {{- end }}

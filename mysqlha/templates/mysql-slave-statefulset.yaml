@@ -1,0 +1,155 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: mysql-slave
+  labels:
+    app: mysql-slave
+spec:
+  replicas: {{ .Values.slave.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: mysql-slave
+      annotations:
+        descript: "mysql ha, one master, one slave."
+    spec:
+      containers:
+      - name: mysql
+        image: {{ .Values.image }}
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: mysql-root-password
+              name: mysql
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: mysql-password
+              name: mysql
+              optional: true
+        - name: MYSQL_USER
+        - name: MYSQL_DATABASE
+        ports:
+        - name: mysql
+          containerPort: 3306
+        volumeMounts:
+        - mountPath: /etc/mysql/mysql.conf.d/mysqld.cnf
+          name: config
+          subPath: mysqld.cnf
+        - mountPath: /var/lib/mysql
+          name: mysql-slave
+          subPath: data
+        - mountPath: /var/log/mysql
+          name: mysql-slave
+          subPath: log
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - "-c"
+            - mysqladmin ping -h 127.0.0.1 -u root -p${MYSQL_ROOT_PASSWORD}
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            # Check we can execute queries over TCP (skip-networking is off).
+            command:
+            - /bin/sh
+            - "-c"
+            - MYSQL_PWD="${MYSQL_ROOT_PASSWORD}"
+            - mysql -h 127.0.0.1 -u root -e "SELECT 1"
+          initialDelaySeconds: 10
+          timeoutSeconds: 1
+        resources:
+{{ toYaml .Values.slave.resources | indent 10 }}
+      - command:
+        - /bin/sh
+        args:
+        - -c
+        - |
+          set -ex
+          /bin/bash /root/slave-start.sh
+          tail -f /var/log/dmesg
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: mysql_root_password
+              name: mysql-slave-config
+        - name: MASTER_HOST
+          value: "mysql-master"
+        - name: MASTER_PORT
+          value: "3306"
+        - name: MASTER_USER
+          valueFrom:
+            secretKeyRef:
+              key: master_user
+              name: mysql-slave-config
+        - name: MASTER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: master_password
+              name: mysql-slave-config
+        - name: MASTER_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: master_root_password
+              name: mysql-slave-config
+        image: {{ .Values.image }}
+        imagePullPolicy: IfNotPresent
+        name: slave-start
+        volumeMounts:
+        - mountPath: /root/slave-start.sh
+          name: slave-start
+          subPath: slave-start.sh
+        - mountPath: /backup
+          name: mysql-slave
+          subPath: backup
+        resources:
+{{ toYaml .Values.slave.resources | indent 10 }}
+      initContainers:
+      - command:
+        - /bin/sh
+        - -c
+        - |
+          number=$(hostname -s|awk -F '-' '{print $NF}')
+          serverId=$((number + 2))
+          cp /config/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf
+          sed -i "s/SERVERID/$serverId/g" /etc/mysql/mysql.conf.d/mysqld.cnf
+        image: {{ .Values.image }}
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - mountPath: /config/mysqld.cnf
+          name: config-init
+          subPath: mysqld.cnf
+        - mountPath: /etc/mysql/mysql.conf.d
+          name: config
+        name: init-config
+        resources:
+{{ toYaml .Values.slave.resources | indent 10 }}
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: mysqld-slave-conf
+          optional: false
+        name: config-init
+      - emptyDir: {}
+        name: config
+      - configMap:
+          defaultMode: 420
+          name: slave-start
+        name: slave-start
+{{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+  - metadata:
+      name: mysql-slave
+      annotations:
+        descript: "slave data"
+    spec:
+      accessModes: 
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: {{ .Values.persistence.size | quote }}
+{{- end }}

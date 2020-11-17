@@ -1,0 +1,86 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ template "codepushserver.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+{{ include "codepushserver.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "codepushserver.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "codepushserver.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: DOWNLOAD_URL
+            value: {{ .Values.env.DOWNLOAD_URL }}
+          - name: MYSQL_USERNAME
+            value: {{ .Values.env.MYSQL_USERNAME }}
+          - name: MYSQL_PASSWORD
+            value: "{{ .Values.env.MYSQL_PASSWORD }}"
+          - name: MYSQL_DATABASE
+            value: {{ .Values.env.MYSQL_DATABASE }}
+          - name: MYSQL_HOST
+            value: {{ .Values.env.MYSQL_HOST }}
+          - name: MYSQL_PORT
+            value: "{{ .Values.env.MYSQL_PORT }}"
+          - name: STORAGE_DIR
+            value: {{ .Values.env.STORAGE_DIR }}
+          - name: DATA_DIR
+            value: {{ .Values.env.DATA_DIR }}
+          - name: NODE_ENV
+            value: production
+          - name: CONFIG_FILE
+            value: /config.js
+          - name: REDIS_HOST
+            value: {{ .Values.env.REDIS_HOST }}
+          - name: REDIS_PORT
+            value: "{{ .Values.env.REDIS_PORT }}"
+          volumeMounts:
+          - name: config
+            mountPath: /config.js
+            subPath: config.js
+          - name: data
+            mountPath: /data/storage
+            subPath: storage
+          - name: data
+            mountPath: /data/tmp
+            subPath: storage
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end}}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+      volumes:
+      - name: config
+        configMap:
+          name: codepushserver
+          items:
+          - key: config.js
+            path: config.js
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.persistent.name }}

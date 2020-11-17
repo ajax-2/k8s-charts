@@ -1,0 +1,20 @@
+apiVersion: v1
+data:
+  backup.sh: "#!/bin/bash\nset -e\n\nif [[ -z ${storagepath} || -z ${mysqlhost} ||
+    -z ${mysqlport} || -z ${mysqlpassword} ]]; then\n  echo \\\"storagepath mysqlhost
+    mysqlport mysqlpassword must be offered.\\\"; \n  exit -1; \nfi\n\nnowtime=`date
+    +'%Y-%m-%d_%H_%M_%S'`\n\n# mysql\nfor simpleDb in `mysql -h${mysqlhost} -P${mysqlport}
+    -uroot -p${mysqlpassword} -e \"show databases;\" -B -N|grep -v schema`\ndo\n\techo
+    \"备份${simpleDb}\"\n\tmysqldump --force -h${mysqlhost} -P${mysqlport} -uroot -p${mysqlpassword}
+    --databases ${simpleDb} --lock-tables=false --master-data=2 --single-transaction
+    |gzip >  ${storagepath}/mysqlbackup_${simpleDb}-${nowtime}.gz\n\techo \"${storagepath}/mysqlbackup_${simpleDb}-${nowtime}.gz\"
+    >> ${storagepath}/${nowtime}\ndone\n\necho \"${nowtime}\" >> ${storagepath}/mysql_backup.state\n\nif
+    [[ `cat ${storagepath}/mysql_backup.state |wc -l` -gt 3 ]]; then\n\tfile_delete=`head
+    -n 1 ${storagepath}/mysql_backup.state`\n\tif [ -f ${storagepath}/${file_delete}
+    ];then\n\t\tfor delete_mysql in `cat ${storagepath}/${file_delete}`\n\t\tdo\n\t\t\techo
+    \"删除过期备份${delete_mysql}\"\n\t\t\trm -rf ${delete_mysql}\n\t\tdone\n\t\trm -f ${storagepath}/${file_delete}\n\tfi\n
+    \ \tsed -i \"/${file_delete}/d\" ${storagepath}/mysql_backup.state\nfi\n"
+kind: ConfigMap
+metadata:
+  name: mysqlbackup
+  namespace: tools

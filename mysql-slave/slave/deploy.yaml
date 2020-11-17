@@ -1,0 +1,134 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: mysql-slave1
+  name: mysql-slave1
+  namespace: tools
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-slave1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: mysql-slave1
+    spec:
+      containers:
+      - env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: mysql_root_password
+              name: mysql-slave1
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: mysql_password
+              name:  mysql-slave1
+              optional: true
+        - name: MYSQL_USER
+        - name: MYSQL_DATABASE
+        image: mysql:5.7.14
+        imagePullPolicy: IfNotPresent
+        name: mysql
+        resources:
+          requests:
+            cpu: 1
+            memory: 1Gi
+          memory:
+            cpu: 1
+            memory: 1Gi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: data
+          subPath: data
+        - mountPath: /etc/mysql/mysql.conf.d/mysqld.cnf
+          name: config
+          subPath: mysqld.cnf
+        - mountPath: /var/log/mysql
+          name: data
+          subPath: log
+      - command:
+        - /bin/sh
+        args:
+        - -c
+        - |
+          set -ex
+          /bin/bash /root/slave-start.sh
+          tail -f /var/log/dmesg
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: mysql_root_password
+              name: mysql-slave1          
+        - name: MASTER_HOST
+          valueFrom:
+            secretKeyRef:
+              key: master_host
+              name: mysql-slave1
+        - name: MASTER_PORT
+          valueFrom:
+            secretKeyRef:
+              key: master_port
+              name: mysql-slave1
+        - name: MASTER_USER
+          valueFrom:
+            secretKeyRef:
+              key: master_user
+              name: mysql-slave1
+        - name: MASTER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: master_password
+              name: mysql-slave1
+        - name: MASTER_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: master_root_password
+              name: mysql-slave1
+        image: mysql:5.7.14
+        imagePullPolicy: IfNotPresent
+        name: slave-start
+        volumeMounts:
+        - mountPath: /root/slave-start.sh
+          name: slave-start
+          subPath: slave-start.sh
+        - mountPath: /backup
+          name: data
+          subPath: backup
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          memory:
+            cpu: 1
+            memory: 2Gi        
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: mysql-slave1
+      - configMap:
+          defaultMode: 420
+          name: mysql-slave1
+          optional: false
+        name: config
+      - configMap:
+          defaultMode: 420
+          name: slave-start
+        name: slave-start

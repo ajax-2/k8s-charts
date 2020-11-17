@@ -1,0 +1,52 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ template "kafka-simple.fullname" . }}
+  labels:
+    app: kafka-simple
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: kafka-simple
+  template:
+    metadata:
+      labels:
+        app: kafka-simple
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          args: 
+          - {{ .Values.hostip }}
+          image: "{{ .Values.image.repository }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+          - name: data
+            mountPath: /kafka/data/zookeeper
+            subPath: zookeeper
+          ports:
+            - name: tcp
+              containerPort: 9092
+              protocol: TCP
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+      hostNetwork: true
+      nodeName: {{ .Values.node }}
+      imagePullSecrets:
+      - name: {{ .Values.imagePullSecrets.name }}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.persistent.name }}

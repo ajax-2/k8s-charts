@@ -1,0 +1,53 @@
+apiVersion: v1
+data:
+  action.yml: |-
+    actions:
+      1:
+        action: delete_indices
+        options:
+          ignore_empty_list: True
+          continue_if_exception: True
+        filters:
+        - filtertype: pattern
+          kind: timestring
+          value: '%Y-%m-%d'
+          exclude: False
+        - filtertype: age
+          source: name
+          direction: older
+          timestring: '%Y-%m-%d'
+          unit: days
+          unit_count: 15
+      2:
+        action: delete_indices
+        options:
+          ignore_empty_list: True
+          continue_if_exception: True
+        filters:
+        - filtertype: pattern
+          kind: prefix
+          value: 'test'
+          exclude: False
+        - filtertype: age
+          source: name
+          direction: older
+          timestring: '%Y-%m-%d'
+          unit: minutes
+          unit_count: 1
+  config.yml: |-
+    client:
+      hosts:
+        - 10.1.9.171
+      port: 9200
+      use_ssl: False
+      ssl_no_validate: True
+      timeout: 30
+
+    logging:
+      loglevel: INFO
+      logfile:
+      logformat: default
+      blacklist: ['elasticsearch', 'urllib3']
+kind: ConfigMap
+metadata:
+  name: curator-config

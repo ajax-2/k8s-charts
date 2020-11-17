@@ -1,0 +1,65 @@
+# Default values for codepushserver.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: tablee/code-push-server:v0.5.2
+  pullPolicy: IfNotPresent
+
+nameOverride: "codepushserver"
+fullnameOverride: "codepushserver"
+namespace: platform
+
+service:
+  type: ClusterIP
+  port: "3000"
+
+env:
+  DOWNLOAD_URL: 10.1.9.171:3000/download
+  MYSQL_USERNAME: root 
+  MYSQL_PASSWORD: "123456"
+  MYSQL_DATABASE: codepush
+  MYSQL_HOST: 10.1.9.171
+  MYSQL_PORT: "38025"
+  STORAGE_DIR: /data/storage
+  DATA_DIR: /data/tmp
+  REDIS_HOST: 10.1.9.171
+  REDIS_PORT: "28306"
+
+persistent:
+  name: codepushserver
+  size: 10Gi
+
+ingress:
+  enabled: true
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: codepushserver.local.com
+      paths: ["/"]
+
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 2
+    memory: 1Gi
+  requests:
+    cpu: 1
+    memory: 512Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

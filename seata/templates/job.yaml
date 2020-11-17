@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: seata
+  name: seata-mysql-init
+spec:
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      containers:
+      - image: bubaoxiaoyu/mysql-client:v1
+        command:
+        - /bin/sh
+        - -c
+        - mysql -h{{ .Values.db.host }} -P{{ .Values.db.port }} -u{{ .Values.db.user }} -p{{ .Values.db.password }} {{ .Values.db.dbname }} < /mysql.sql
+        imagePullPolicy: IfNotPresent
+        name: mysql-init
+        resources:
+          requests:
+            cpu: 2m
+            memory: 20Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
+        volumeMounts:
+        - mountPath: /mysql.sql
+          name: config
+          subPath: mysql.sql
+      restartPolicy: Never
+      volumes:
+      - name: config
+        configMap:
+          name: mysql-seata
+          items:
+          - key: mysql.sql
+            path: mysql.sql

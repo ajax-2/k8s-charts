@@ -1,0 +1,14 @@
+apiVersion: v1
+data:
+  backup.sh: "#!/bin/bash\nif [[ -z $endpoints || -z $capath || -z $storagepath ]];
+    then\n  echo \"endpoints capath storagepath must be offered.\"; \n  exit 1; \nfi\n\n#
+    etcd\nnowtime=`date +'%Y-%m-%d_%H_%M_%S'`\nETCDCTL_API=3 etcdctl  --endpoints=$endpoints
+    --cacert=$capath/ca.crt --cert=$capath/server.crt --key=$capath/server.key  snapshot
+    save $storagepath/etcdbackup_$nowtime\necho \"etcdbackup_$nowtime\" >> $storagepath/etcd_backup\nif
+    [[ `cat $storagepath/etcd_backup |wc -l` -gt 3 ]]; then\n  delete_etcd=`head -n
+    1 $storagepath/etcd_backup`\n  rm -rf $storagepath/$delete_etcd\n  sed -i \"/$delete_etcd/d\"
+    $storagepath/etcd_backup\nfi\n\n"
+kind: ConfigMap
+metadata:
+  name: etcdbackup
+  namespace: tools
