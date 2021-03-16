@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    job-name: copy-flink-lib
+  name: copy-flink-lib
+spec:
+  template:
+    metadata:
+      labels:
+        job-name: copy-flink-lib
+    spec:
+      containers:
+      - command: 
+        - /bin/sh
+        - /root/run.sh
+        image: bubaoxiaoyu/flink-lib:v1
+        imagePullPolicy: IfNotPresent
+        name: copy-flink-job
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /flink/lib
+          name: lib
+        - mountPath: /root/run.sh
+          name: start
+          subPath: run.sh
+      dnsPolicy: ClusterFirst
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - persistentVolumeClaim:
+          claimName: {{ .Values.pvc.name }}
+        name: lib
+      - name: start
+        configMap:
+          name: flink-copy-lib
+

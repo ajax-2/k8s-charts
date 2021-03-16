@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thunderbi-env
+  labels:
+    app: thunderbi-env
+data:
+  REDASH_LOG_LEVEL: "INFO"
+  REDASH_REDIS_URL: "redis://:agnYqD2fih@192.168.1.31:6379/2"
+  REDASH_JOB_NUMBER_CUSTOM_USERNAME_PROMPT: "工号"
+  REDASH_LOG_LEVEL: "INFO"
+  REDASH_JOB_NUMBER_LOGIN_ENABLED: "true"
+  REDASH_DATABASE_URL: "postgresql://postgres:tdai123@192.168.1.31/bisheng-bi"
+  REDASH_RATELIMIT_ENABLED: "false"
+  REDASH_MAIL_DEFAULT_SENDER: "thunderbi@thunderbi.com"
+  REDASH_MAIL_SERVER: "email"
+  REDASH_ENFORCE_CSRF: "true"
+  REDASH_HOST: "http://thunderbi.thundersdata.com"
+  SQLALCHEMY_POOL_SIZE: "100"
+  TZ: "Asia/Shanghai"
+  ## LDAP Config
+  REDASH_LDAP_LOGIN_ENABLED: "true"
+  REDASH_LDAP_URL: "192.168.0.202:21070"
+  REDASH_LDAP_BIND_DN: "cn=admin,dc=thundersdata,dc=com"
+  REDASH_LDAP_BIND_DN_PASSWORD: "leishu2018"
+  REDASH_LDAP_DISPLAY_NAME_KEY: "uid"
+  REDASH_LDAP_EMAIL_KEY: "mail"
+  REDASH_LDAP_CUSTOM_USERNAME_PROMPT: "LDAP username"
+  REDASH_LDAP_SEARCH_TEMPLATE: "(uid=%(username)s)"
+  REDASH_LDAP_SEARCH_DN: "ou=user,dc=thundersdata,dc=com"
+  ## 
+  REDASH_FEATURE_ALLOW_CUSTOM_JS_VISUALIZATIONS: "true"

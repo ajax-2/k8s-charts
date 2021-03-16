@@ -1,0 +1,31 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: thunderbi-email
+  name: thunderbi-email
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thunderbi-email
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: thunderbi-email
+    spec:
+      containers:
+      - image: registry-vpc.cn-hangzhou.aliyuncs.com/thundersdata-public/maildev:v0.1.0
+        imagePullPolicy: IfNotPresent
+        name: thunderbi-email
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      imagePullSecrets:
+      - name: regsecret
+

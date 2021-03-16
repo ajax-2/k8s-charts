@@ -1,0 +1,38 @@
+# Default values for flink.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+replicaCount: 1
+
+image:
+  repository: registry-vpc.cn-hangzhou.aliyuncs.com/thundersdata-public/hue:4.9.0-flink-ck
+  pullPolicy: IfNotPresent
+
+database:
+  engine: mysql
+  host: 10.1.9.171
+  port: 3306
+  user: root
+  password: abc123
+  name: hue
+
+flink:
+  url: http://10.1.9.171:38325
+
+clickhouse:
+  enabled: true
+  url: clickhouse://192.168.0.201:9993
+
+service:
+  port: 8888
+  type: NodePort
+
+ingress:
+  host: hue.dev.thundersdata.com
+
+resources:
+  limits:
+    cpu: 1
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 512Mi

@@ -1,0 +1,48 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: hue-flink-clickhouse
+  name: hue-flink-clickhouse
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: hue-flink-clickhouse
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: hue-flink-clickhouse
+    spec:
+      containers:
+      - image: {{ .Values.image.repository }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        name: hue
+        ports:
+        - containerPort: {{ .Values.service.port }}
+          protocol: TCP
+          name: http
+        resources:
+{{ toYaml .Values.resources | indent 12 }}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /usr/share/hue/desktop/conf/hue.ini
+          name: config
+          subPath: hue.ini
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: hue-flink-config
+        name: config

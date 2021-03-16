@@ -1,0 +1,108 @@
+# Default values for flink.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+global:
+  hue:
+    host: hue.demo.com
+
+job:
+  replicaCount: 1
+  image:
+    repository: registry-vpc.cn-hangzhou.aliyuncs.com/thundersdata-public/flink:gateway
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 1
+      memory: 2Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  imagePullSecrets:
+    enabled: true
+    name: regsecret
+  service:
+    type: NodePort
+
+task:
+  replicaCount: 2
+  image:
+    repository: registry-vpc.cn-hangzhou.aliyuncs.com/thundersdata-public/flink:gateway
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 1
+      memory: 1Gi
+  imagePullSecrets:
+    enabled: true
+    name: regsecret
+  service:
+    type: ClusterIP
+
+nameOverride: ""
+fullnameOverride: ""
+
+pvc:
+  name: flink
+  size: 1Gi
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: flink.local.com
+      paths: ['/']
+
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+hue:
+  replicaCount: 1
+
+  repository: registry-vpc.cn-hangzhou.aliyuncs.com/thundersdata-public/hue:4.9.0-flink-ck
+  pullPolicy: IfNotPresent
+
+  engine: mysql
+  host: 10.1.9.171
+  port: 3306
+  user: root
+  password: abc123
+  name: hue
+  url: http://10.1.9.171:38325
+
+  clickhouse_enabled: true
+  clickhouse_url: clickhouse://192.168.0.201:9993
+
+  service_port: 8080
+  service_type: NodePort
+
+  ingress_host: hue.dev.thundersdata.com
+
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi

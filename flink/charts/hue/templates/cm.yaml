@@ -1,0 +1,56 @@
+apiVersion: v1
+data:
+  hue.ini: |-
+    [desktop]
+      secret_key=
+      http_host=0.0.0.0
+      http_port=8000
+      time_zone=America/Los_Angeles
+      app_blacklist=spark,zookeeper,hbase,impala,search,sqoop,pig
+      http_x_frame_options="allowall"
+      secure_content_security_policy="script-src 'self' 'unsafe-inline' 'unsafe-eval' *"
+      dev=false
+      default_site_encoding=utf
+      cherrypy_server_threads=100
+      send_dbug_messages=false
+      [[auth]]
+        idle_session_timeout=-1
+        user_augmentor=desktop.auth.backend.DefaultUserAugmentor
+        backend=desktop.auth.backend.AllowFirstUserDjangoBackend
+      [[[users]]]
+        user_name_attr="cn"
+      [[[groups]]]
+        group_filter="(objectClass=posixGroup)"
+        group_name_attr="cn"
+        group_member_attr="memberUid"
+      [[database]]
+        engine={{ .Values.database.engine }}
+        host={{ .Values.database.host }}
+        port={{ .Values.database.port }}
+        user={{ .Values.database.user }}
+        password={{ .Values.database.password }}
+        name={{ .Values.database.name }}
+    [notebook]
+      enable_notebook_2=true
+      [[interpreters]]
+        [[[flink]]]
+          name=Flink
+          interface=flink
+          options='{"url": "{{ .Values.flink.url }}"}'
+        {{- if .Values.clickhouse.enabled }}
+        [[[clickhouse]]]
+          name = Clickhouse
+          interface=sqlalchemy
+          options='{"url": "{{ .Values.clickhouse.url }}"}'
+        {{- end }}
+        [[[hive]]]
+          name=Hive
+          interface=hiveserver2
+    [useradmin]
+    [proxy]
+      whitelist=(*|localhost|127\.0\.0\.1):(50030|50070|50060|50075)
+kind: ConfigMap
+metadata:
+  labels:
+    k8s-app: hue
+  name: hue-flink-config

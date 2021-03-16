@@ -1,0 +1,48 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: thunderbi-worker
+  name: thunderbi-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thunderbi-worker
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: thunderbi-worker
+    spec:
+      containers:
+      - args:
+        - dev_worker
+        envFrom:
+        - configMapRef:
+            name: thunderbi-env
+        image: registry-vpc.cn-hangzhou.aliyuncs.com/thundersdata-public/thunderbi_base_image:v0.1.0
+        imagePullPolicy: IfNotPresent
+        name: thunderbi-worker
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      initContainers:
+      - env:
+        - name: tcp_port
+          value: "5000"
+        - name: tcp_ip
+          value: thunderbi-server
+        image: bubaoxiaoyu/init-container:check-port
+        imagePullPolicy: IfNotPresent
+        name: init
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File          
+      imagePullSecrets:
+      - name: regsecret
+

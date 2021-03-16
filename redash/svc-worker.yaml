@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: thunderbi-worker
+  name: thunderbi-worker
+spec:
+  ports:
+  - port: 5000
+    name: http1
+    protocol: TCP
+    targetPort: 5000
+  - port: 5678
+    name: http2
+    protocol: TCP
+    targetPort: 5678
+  selector:
+    app: thunderbi-worker
+  sessionAffinity: None
+  type: ClusterIP

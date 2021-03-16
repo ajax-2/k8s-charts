@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  name: {{ template "clickhouse.fullname" . }}
+  labels:
+{{ include "clickhouse.labels" . | indent 4 }}
+spec:
+  ports:
+  - port: 9000
+    name: client
+    protocol: TCP
+    targetPort: 9000
+  - port: {{ .Values.service.port }}
+    name: http
+    protocol: TCP
+    targetPort: 8123
+  selector:
+    app.kubernetes.io/name: {{ include "clickhouse.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  type: {{ .Values.service.type }}
+status:
+  loadBalancer: {}

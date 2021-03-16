@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: hue-flink-clickhouse
+  name: hue-flink-clickhouse
+spec:
+  ports:
+  - port: {{ .Values.service.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: hue-flink-clickhouse
+  sessionAffinity: None
+  type: {{ .Values.service.type }}

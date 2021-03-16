@@ -1,0 +1,36 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: thunderbi-server
+  name: thunderbi-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: thunderbi-server
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: thunderbi-server
+    spec:
+      containers:
+      - args:
+        - dev_server
+        envFrom:
+        - configMapRef:
+            name: thunderbi-env
+        image: registry-vpc.cn-hangzhou.aliyuncs.com/thundersdata-public/thunderbi_base_image:v0.1.0
+        imagePullPolicy: IfNotPresent
+        name: thunderbi-server
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      imagePullSecrets:
+      - name: regsecret
+

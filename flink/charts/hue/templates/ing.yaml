@@ -1,0 +1,13 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: hue-flink-clickhouse
+spec:
+  rules:
+  - host: {{ .Values.global.hue.host }}
+    http:
+      paths:
+      - backend:
+          serviceName: hue-flink-clickhouse
+          servicePort: {{ .Values.service.port }}
+        path: /

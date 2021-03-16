@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-jobmanager
+spec:
+  replicas: {{ .Values.job.replicaCount }}
+  selector:
+    matchLabels:
+      app: flink
+      component: jobmanager
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: jobmanager
+    spec:
+      containers:
+      - name: jobmanager
+        image: {{ .Values.job.image.repository }}
+        imagePullPolicy: {{ .Values.job.image.pullPolicy }}
+        args: ["jobmanager"]
+        ports:
+        - containerPort: 6123
+          name: rpc
+        - containerPort: 6124
+          name: blob-server
+        - containerPort: 8081
+          name: webui
+        - containerPort: 8083
+          name: gateway
+        livenessProbe:
+          tcpSocket:
+            port: 6123
+          initialDelaySeconds: 30
+          periodSeconds: 60
+        volumeMounts:
+        - name: flink-config-volume
+          mountPath: /opt/flink/conf
+        - name: lib
+          mountPath: /opt/flink/lib
+        securityContext:
+          runAsUser: 9999  # refers to user _flink_ from official flink image, change if necessary
+{{- if .Values.job.imagePullSecrets.enabled }}
+      imagePullSecrets:
+      - name: {{ .Values.job.imagePullSecrets.name }}
+    {{- end }}
+      volumes:
+      - name: flink-config-volume
+        configMap:
+          name: flink-config
+          items:
+          - key: flink-conf.yaml
+            path: flink-conf.yaml
+          - key: log4j-console.properties
+            path: log4j-console.properties
+      - persistentVolumeClaim:
+          claimName: {{ .Values.pvc.name }}
+        name: lib

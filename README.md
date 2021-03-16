@@ -25,3 +25,13 @@
 	sentinel-dashboard 实时监控
 
 	upsource 代码审核
+ 
+        redash 看板
+     
+        flink 流处理， 包含hue
+
+        clickhouse clickhouse 数据库
+  
+        kfaka-ui kafka consume web工具
+       
+        debezium kafka connector工具
